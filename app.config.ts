@@ -28,11 +28,11 @@ const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
   // App branding - update these values directly (do not use env vars)
-  appName: "乒乓 Arena - AI乒乓球社交竞技平台",
+  appName: "乒乓 Arena",
   appSlug: "pingpong-arena",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "",
+  logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663619101071/WJtoF9oGonunu9A25BgQzi/pingpong-arena-icon-dFYbE2if7xDa78mwtmqHEi.png",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,

@@ -5,25 +5,38 @@ import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
+type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>["name"]>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
+ * SF Symbols to Material Icons mappings for PingPong Arena
  */
 const MAPPING = {
+  // Tab icons
   "house.fill": "home",
+  "doc.text.fill": "description",
+  "trophy.fill": "emoji-events",
+  "sportscourt.fill": "sports-tennis",
+  "person.fill": "person",
+  // Common icons
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
+  "plus.circle.fill": "add-circle",
+  "chart.bar.fill": "bar-chart",
+  "flame.fill": "local-fire-department",
+  "star.fill": "star",
+  "bolt.fill": "bolt",
+  "person.2.fill": "people",
+  "calendar": "event",
+  "location.fill": "place",
+  "gear": "settings",
+  "arrow.up.circle.fill": "trending-up",
+  "arrow.down.circle.fill": "trending-down",
 } as IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
  */
 export function IconSymbol({
   name,
