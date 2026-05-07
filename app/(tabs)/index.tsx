@@ -82,11 +82,11 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push('/(tabs)/challenge' as any)}
+            onPress={() => router.push('/matching' as any)}
           >
             <View className="bg-accent rounded-xl py-4 items-center">
-              <Text className="text-2xl mb-1">⚔️</Text>
-              <Text className="text-sm font-semibold text-background">发起挑战</Text>
+              <Text className="text-2xl mb-1">📡</Text>
+              <Text className="text-sm font-semibold text-background">附近匹配</Text>
             </View>
           </Pressable>
           <Pressable
