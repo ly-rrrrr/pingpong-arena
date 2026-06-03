@@ -35,18 +35,26 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
-  // On web, derive from current hostname by replacing port 8081 with 3000
+  // On web, derive API URL from current page location
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
-    const { protocol, hostname } = window.location;
-    // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
+    const { protocol, hostname, port } = window.location;
+    // Cloud tunnel pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
     const apiHostname = hostname.replace(/^8081-/, "3000-");
     if (apiHostname !== hostname) {
       return `${protocol}//${apiHostname}`;
     }
+    // Local dev pattern: localhost:8081 -> localhost:3000
+    if (port === "8081") {
+      return `${protocol}//${hostname}:3000`;
+    }
+    // If already on the API server port, use current origin
+    if (port === "3000") {
+      return `${protocol}//${hostname}:3000`;
+    }
   }
 
-  // Fallback to empty (will use relative URL)
-  return "";
+  // Fallback to localhost:3000 for local development
+  return "http://localhost:3000";
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";

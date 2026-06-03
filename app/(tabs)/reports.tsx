@@ -2,7 +2,7 @@ import { Text, View, FlatList, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { matchRecords } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
 import { MatchRecord } from "@/lib/types";
 
 function MatchCard({ match }: { match: MatchRecord }) {
@@ -73,6 +73,7 @@ function MatchCard({ match }: { match: MatchRecord }) {
 }
 
 export default function ReportsScreen() {
+  const { matchRecords } = useAppData();
   const totalWins = matchRecords.filter(m => m.result === 'win').length;
   const totalLosses = matchRecords.filter(m => m.result === 'lose').length;
 

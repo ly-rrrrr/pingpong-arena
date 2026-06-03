@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text, View, FlatList, Pressable, Alert } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { friends, challenges } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
 import { Friend, Challenge } from "@/lib/types";
 
 function getRankColor(rankTier: string): string {
@@ -104,6 +104,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
 
 export default function ChallengeScreen() {
   const [activeTab, setActiveTab] = useState<'friends' | 'challenges'>('friends');
+  const { friends, challenges } = useAppData();
 
   return (
     <ScreenContainer className="pt-2">

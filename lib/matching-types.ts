@@ -63,6 +63,7 @@ export interface MatchSession {
   opponentNickname: string;
   opponentAvatar: string;
   opponentRankTier: string;
+  opponentApproxDistance?: string;
   status: MatchingStatus;
   messages: ChannelMessage[];
   selectedVenue?: Venue;

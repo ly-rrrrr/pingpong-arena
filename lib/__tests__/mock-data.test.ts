@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { currentUser, matchRecords, rankingData, friends, challenges, techAnalysis } from '../mock-data';
+import * as mockData from '../mock-data';
+import { currentUser, matchRecords, rankingData, friends, challenges } from '../mock-data';
 
 describe('Mock Data Integrity', () => {
   it('currentUser has valid properties', () => {
@@ -59,20 +60,7 @@ describe('Mock Data Integrity', () => {
     });
   });
 
-  it('techAnalysis dimensions are within 0-100 range', () => {
-    const dims = techAnalysis.dimensions;
-    Object.values(dims).forEach((value) => {
-      expect(value).toBeGreaterThanOrEqual(0);
-      expect(value).toBeLessThanOrEqual(100);
-    });
-    expect(techAnalysis.overall).toBeGreaterThanOrEqual(0);
-    expect(techAnalysis.overall).toBeLessThanOrEqual(100);
-  });
-
-  it('techAnalysis has suggestions and trends', () => {
-    expect(techAnalysis.suggestions.length).toBeGreaterThan(0);
-    expect(techAnalysis.trend.length).toBeGreaterThan(0);
-    expect(techAnalysis.strengths.length).toBeGreaterThan(0);
-    expect(techAnalysis.weaknesses.length).toBeGreaterThan(0);
+  it('does not ship video-derived technical analysis as mock truth', () => {
+    expect('techAnalysis' in mockData).toBe(false);
   });
 });

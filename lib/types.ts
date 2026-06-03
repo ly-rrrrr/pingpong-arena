@@ -36,18 +36,17 @@ export interface MatchRecord {
 // 战报详情
 export interface MatchReport {
   matchId: string;
-  techAnalysis: {
-    serve: number; // 发球 0-100
-    receive: number; // 接发球
-    forehand: number; // 正手
-    backhand: number; // 反手
-    footwork: number; // 步法
-    mentality: number; // 心态
-  };
+  summary: string;
   highlights: string[];
   suggestions: string[];
-  overallRating: number; // 总评分
-  aiComment: string; // AI评语
+  stats: {
+    myGames: number;
+    oppGames: number;
+    totalPoints: number;
+    pointDiff: number;
+    closeGames: number;
+    largestMargin: number;
+  };
 }
 
 // 排行榜条目
@@ -85,19 +84,7 @@ export interface Challenge {
   result?: 'win' | 'lose';
 }
 
-// AI技术分析
-export interface TechAnalysis {
-  overall: number;
-  dimensions: {
-    serve: number;
-    receive: number;
-    forehand: number;
-    backhand: number;
-    footwork: number;
-    mentality: number;
-  };
-  trend: Array<{ date: string; score: number }>;
-  strengths: string[];
-  weaknesses: string[];
-  suggestions: string[];
+export interface ScoreTrendPoint {
+  date: string;
+  score: number;
 }

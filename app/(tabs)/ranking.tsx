@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Text, View, FlatList, Pressable } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { rankingData } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
 import { RankingEntry } from "@/lib/types";
 
 const tabs = ['好友榜', '球馆榜', '城市榜'] as const;
@@ -71,6 +71,7 @@ function RankingItem({ item }: { item: RankingEntry }) {
 
 export default function RankingScreen() {
   const [activeTab, setActiveTab] = useState(0);
+  const { rankingData } = useAppData();
 
   return (
     <ScreenContainer className="pt-2">

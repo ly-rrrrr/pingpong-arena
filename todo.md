@@ -10,8 +10,8 @@
 - [x] 记录比赛页面
 - [x] 排行榜页面（多榜单切换）
 - [x] 好友挑战页面
-- [x] 个人中心页面（技术雷达图、成就、统计）
-- [x] AI技术分析页面
+- [x] 个人中心页面（积分走势、成就、统计）
+- [x] 比分数据复盘页面
 - [x] 数据层（AsyncStorage 本地存储）
 - [x] 模拟数据生成
 - [x] 应用Logo生成
@@ -24,3 +24,12 @@
 - [x] 匹配机制 - 时间协商流程（最多2次）
 - [x] 匹配机制 - 劝退通知与三选项机制
 - [x] 匹配机制 - 双方选择状态可见与事务生效逻辑
+# 免费 OSM 高校边界接入
+
+- 已将校区准入从 `center + radiusMeters` 改为 polygon 边界命中。
+- 当前运行时只读取本地开放高校 polygon，不在用户进入大厅时请求公共 OSM 服务。
+- 免费边界来源优先使用 OpenStreetMap：
+  - Nominatim：按高校名称查询 GeoJSON polygon。
+  - Overpass：在 Nominatim 无 polygon 时查询 `amenity=university` 或 `landuse=education` 面数据。
+- 如果 OSM 没有可用高校边界，保留手工维护的 `manual_fallback` polygon。
+- 使用 OSM 衍生边界时需要在应用中展示 OpenStreetMap 署名。

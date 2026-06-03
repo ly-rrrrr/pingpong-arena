@@ -49,6 +49,15 @@ export default function ConfirmScreen() {
         {/* 标题 */}
         <Text className="text-xl font-bold text-foreground mb-2">匹配确认</Text>
         <Text className="text-sm text-muted mb-8 text-center">双方同时点击确认后将进入专属频道</Text>
+        {state.session.opponentApproxDistance && (
+          <View className="bg-primary/10 rounded-full px-4 py-2 mb-6">
+            <Text className="text-xs text-primary font-medium">
+              {state.session.opponentApproxDistance === "同校区"
+                ? "对方与您在同一校区"
+                : `对方距离您${state.session.opponentApproxDistance}`}
+            </Text>
+          </View>
+        )}
 
         {/* 双方头像 */}
         <View className="flex-row items-center mb-8">

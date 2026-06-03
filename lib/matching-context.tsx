@@ -11,7 +11,7 @@ interface MatchingState {
 type MatchingAction =
   | { type: 'START_BROADCAST'; message: string }
   | { type: 'CANCEL_BROADCAST' }
-  | { type: 'ACCEPT_MATCH'; opponentId: string; opponentNickname: string; opponentAvatar: string; opponentRankTier: string }
+  | { type: 'ACCEPT_MATCH'; opponentId: string; opponentNickname: string; opponentAvatar: string; opponentRankTier: string; opponentApproxDistance?: string }
   | { type: 'BOTH_CONFIRMED' }
   | { type: 'ENTER_CHANNEL' }
   | { type: 'SEND_MESSAGE'; message: ChannelMessage }
@@ -50,6 +50,7 @@ function matchingReducer(state: MatchingState, action: MatchingAction): Matching
           opponentNickname: action.opponentNickname,
           opponentAvatar: action.opponentAvatar,
           opponentRankTier: action.opponentRankTier,
+          opponentApproxDistance: action.opponentApproxDistance,
           status: 'confirming',
           messages: [],
           timeProposals: [],

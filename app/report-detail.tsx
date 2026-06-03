@@ -2,11 +2,13 @@ import { ScrollView, Text, View, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { matchRecords } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
+import { createScoreReport } from "@/lib/match-rules";
 
 export default function ReportDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { matchRecords } = useAppData();
   const match = matchRecords.find(m => m.id === id);
 
   if (!match) {
@@ -19,20 +21,7 @@ export default function ReportDetailScreen() {
 
   const myGames = match.scores.filter(s => s[0] > s[1]).length;
   const oppGames = match.scores.filter(s => s[0] < s[1]).length;
-
-  // 模拟AI分析数据
-  const techScores = {
-    serve: Math.floor(Math.random() * 20) + 70,
-    receive: Math.floor(Math.random() * 25) + 60,
-    forehand: Math.floor(Math.random() * 20) + 70,
-    backhand: Math.floor(Math.random() * 25) + 60,
-    footwork: Math.floor(Math.random() * 20) + 65,
-    mentality: Math.floor(Math.random() * 15) + 70,
-  };
-
-  const suggestions = match.result === 'win'
-    ? ['保持正手进攻的积极性', '注意发球后的衔接球处理', '相持中可以更多变化节奏']
-    : ['加强反手位的防守能力', '接发球时注意判断旋转', '落后时保持心态稳定，减少无谓失误'];
+  const report = createScoreReport(match);
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} className="px-4 pt-2">
@@ -95,34 +84,39 @@ export default function ReportDetailScreen() {
           ))}
         </View>
 
-        {/* AI技术分析 */}
+        {/* 比分复盘 */}
         <View className="bg-surface rounded-2xl p-4 mb-4 border border-border">
-          <Text className="text-base font-bold text-foreground mb-3">🤖 AI 技术分析</Text>
+          <Text className="text-base font-bold text-foreground mb-2">📌 比分复盘</Text>
+          <Text className="text-sm text-muted leading-5 mb-3">{report.summary}</Text>
           <View className="flex-row flex-wrap">
-            {Object.entries(techScores).map(([key, value]) => {
-              const labels: Record<string, string> = {
-                serve: '发球', receive: '接发球', forehand: '正手',
-                backhand: '反手', footwork: '步法', mentality: '心态',
-              };
-              return (
-                <View key={key} className="w-1/3 items-center mb-3">
-                  <View className="w-12 h-12 rounded-full items-center justify-center border-2 border-primary/30">
-                    <Text className="text-sm font-bold text-primary">{value}</Text>
-                  </View>
-                  <Text className="text-xs text-muted mt-1">{labels[key]}</Text>
+            {[
+              { label: '总小分', value: report.stats.pointDiff > 0 ? `+${report.stats.pointDiff}` : `${report.stats.pointDiff}` },
+              { label: '胶着局', value: `${report.stats.closeGames}` },
+              { label: '最大分差', value: `${report.stats.largestMargin}` },
+            ].map((item) => (
+              <View key={item.label} className="w-1/3 items-center mb-2">
+                <View className="w-12 h-12 rounded-full items-center justify-center border-2 border-primary/30">
+                  <Text className="text-sm font-bold text-primary">{item.value}</Text>
                 </View>
-              );
-            })}
+                <Text className="text-xs text-muted mt-1">{item.label}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* 改进建议 */}
+        {/* 记录洞察 */}
         <View className="bg-surface rounded-2xl p-4 mb-4 border border-border">
-          <Text className="text-base font-bold text-foreground mb-3">💡 改进建议</Text>
-          {suggestions.map((suggestion, idx) => (
+          <Text className="text-base font-bold text-foreground mb-3">💡 记录洞察</Text>
+          {report.highlights.map((item, idx) => (
             <View key={idx} className="flex-row mb-2">
               <Text className="text-accent mr-2">•</Text>
-              <Text className="text-sm text-foreground flex-1 leading-5">{suggestion}</Text>
+              <Text className="text-sm text-foreground flex-1 leading-5">{item}</Text>
+            </View>
+          ))}
+          {report.suggestions.map((suggestion, idx) => (
+            <View key={`suggestion-${idx}`} className="flex-row mb-2">
+              <Text className="text-primary mr-2">•</Text>
+              <Text className="text-sm text-muted flex-1 leading-5">{suggestion}</Text>
             </View>
           ))}
         </View>

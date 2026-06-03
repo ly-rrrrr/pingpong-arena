@@ -3,10 +3,11 @@ import { ScrollView, Text, View, Pressable, TextInput, Alert } from "react-nativ
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { friends } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
 
 export default function RecordMatchScreen() {
   const router = useRouter();
+  const { currentUser, friends, addManualMatch } = useAppData();
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [matchType, setMatchType] = useState<'ranked' | 'friendly'>('ranked');
   const [scores, setScores] = useState<Array<{ my: string; opp: string }>>([
@@ -34,20 +35,46 @@ export default function RecordMatchScreen() {
     setScores(newScores);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedOpponent) {
       Alert.alert('提示', '请选择对手');
       return;
     }
 
-    const validScores = scores.filter(s => s.my && s.opp);
+    const opponent = friends.find((friend) => friend.id === selectedOpponent);
+    if (!opponent) {
+      Alert.alert('提示', '对手不存在');
+      return;
+    }
+
+    const validScores = scores
+      .filter(s => s.my && s.opp)
+      .map((score) => [Number(score.my), Number(score.opp)] as [number, number]);
     if (validScores.length < 3) {
       Alert.alert('提示', '请至少输入3局比分');
       return;
     }
+    if (validScores.some(([my, opp]) => !Number.isInteger(my) || !Number.isInteger(opp) || my < 0 || opp < 0 || my === opp)) {
+      Alert.alert('提示', '请输入有效比分，每局不能平分');
+      return;
+    }
 
-    Alert.alert('记录成功', '比赛已记录，战报已生成！', [
-      { text: '查看战报', onPress: () => router.back() },
+    const myGames = validScores.filter(([my, opp]) => my > opp).length;
+    const oppGames = validScores.filter(([my, opp]) => opp > my).length;
+    if (myGames === oppGames) {
+      Alert.alert('提示', '请确认最终局分能分出胜负');
+      return;
+    }
+
+    const match = await addManualMatch({
+      opponent,
+      scores: validScores,
+      matchType,
+      venue,
+    });
+
+    Alert.alert('记录成功', `${currentUser.nickname} 的比分已保存，已生成比分复盘。`, [
+      { text: '查看复盘', onPress: () => router.replace(`/report-detail?id=${match.id}` as any) },
     ]);
   };
 

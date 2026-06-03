@@ -2,7 +2,7 @@ import { ScrollView, Text, View, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { currentUser, matchRecords } from "@/lib/mock-data";
+import { useAppData } from "@/lib/app-data";
 
 function getRankColor(rankTier: string): string {
   const colors: Record<string, string> = {
@@ -19,6 +19,7 @@ function getRankColor(rankTier: string): string {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { currentUser, matchRecords } = useAppData();
   const recentMatches = matchRecords.slice(0, 5);
   const recentWins = recentMatches.filter(m => m.result === 'win').length;
   const recentLosses = recentMatches.filter(m => m.result === 'lose').length;
@@ -95,7 +96,7 @@ export default function HomeScreen() {
           >
             <View className="bg-surface border border-border rounded-xl py-4 items-center">
               <Text className="text-2xl mb-1">📊</Text>
-              <Text className="text-sm font-semibold text-foreground">AI分析</Text>
+              <Text className="text-sm font-semibold text-foreground">数据复盘</Text>
             </View>
           </Pressable>
         </View>
@@ -147,11 +148,11 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* 今日推荐 */}
+        {/* 记录建议 */}
         <View className="bg-surface rounded-2xl p-4 border border-border">
-          <Text className="text-lg font-bold text-foreground mb-2">💡 今日训练建议</Text>
+          <Text className="text-lg font-bold text-foreground mb-2">💡 记录建议</Text>
           <Text className="text-sm text-muted leading-5">
-            根据您最近的比赛表现，建议今天重点练习反手位接发球。可以进行20分钟多球训练，注意判断来球旋转方向。
+            当前版本基于手动比分生成复盘。记录每局比分后，系统会更新战绩、积分和排行榜；如果想提升复盘质量，可以在赛后补充关键分备注。
           </Text>
         </View>
       </ScrollView>

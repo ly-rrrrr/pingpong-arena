@@ -1,4 +1,4 @@
-import { UserProfile, MatchRecord, RankingEntry, Friend, Challenge, TechAnalysis } from './types';
+import { UserProfile, MatchRecord, RankingEntry, Friend, Challenge } from './types';
 
 // 当前用户
 export const currentUser: UserProfile = {
@@ -147,39 +147,3 @@ export const challenges: Challenge[] = [
   },
 ];
 
-// AI技术分析
-export const techAnalysis: TechAnalysis = {
-  overall: 72,
-  dimensions: {
-    serve: 78,
-    receive: 65,
-    forehand: 82,
-    backhand: 68,
-    footwork: 70,
-    mentality: 74,
-  },
-  trend: [
-    { date: '04-01', score: 65 },
-    { date: '04-08', score: 67 },
-    { date: '04-15', score: 69 },
-    { date: '04-22', score: 71 },
-    { date: '04-29', score: 70 },
-    { date: '05-06', score: 72 },
-  ],
-  strengths: [
-    '正手攻球力量充足，命中率高',
-    '发球变化多，旋转强烈',
-    '比赛心态稳定，关键球处理得当',
-  ],
-  weaknesses: [
-    '反手位接发球判断不够准确',
-    '步法移动速度有待提升',
-    '相持球中反手稳定性不足',
-  ],
-  suggestions: [
-    '建议加强反手位多球训练，提升反手拨球稳定性',
-    '每次训练增加15分钟步法专项练习',
-    '接发球时注意观察对手抛球动作，提前判断旋转',
-    '相持中注意重心转换，保持身体平衡',
-  ],
-};
