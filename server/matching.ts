@@ -177,6 +177,7 @@ export function enterLobby({
   }
 
   const campus = resolveCampus(location);
+  console.log(`[enterLobby] user=${user.id} lat=${location.latitude} lng=${location.longitude} campus=${campus?.name ?? "NONE"}`);
   if (!campus) {
     presenceStore.delete(user.id);
     return {
@@ -275,6 +276,269 @@ export function listBroadcasts({
   });
 }
 
+// ---------------------------------------------------------------------------
+// Match requests — when B accepts A's broadcast, a match request is created.
+// A polls for incoming requests; both confirm via the server.
+// ---------------------------------------------------------------------------
+
+export type MatchRequest = {
+  id: string;
+  fromUserId: string;      // the user who accepted (B)
+  fromNickname: string;
+  fromAvatar: string;
+  fromRankTier: string;
+  fromScore: number;
+  toUserId: string;         // the broadcast creator (A)
+  broadcastId: string;
+  campusId: string;
+  status: "pending" | "accepted" | "declined" | "expired";
+  fromConfirmed: boolean;   // B confirmed
+  toConfirmed: boolean;     // A confirmed
+  createdAt: number;
+  expiresAt: number;
+};
+
+const MATCH_REQUEST_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let matchRequestStore = new Map<string, MatchRequest>();
+
+function cleanExpiredMatchRequests() {
+  const cutoff = now() - MATCH_REQUEST_TTL_MS;
+  const expired: string[] = [];
+  for (const [id, mr] of matchRequestStore.entries()) {
+    if (mr.createdAt < cutoff || mr.status === "expired") expired.push(id);
+  }
+  for (const id of expired) matchRequestStore.delete(id);
+}
+
+function getPendingMatchRequestForUser(userId: string): MatchRequest | undefined {
+  cleanExpiredMatchRequests();
+  for (const mr of matchRequestStore.values()) {
+    if (mr.toUserId === userId && mr.status === "pending") return mr;
+  }
+}
+
+function getIncomingMatchRequestForUser(userId: string): MatchRequest | undefined {
+  cleanExpiredMatchRequests();
+  for (const mr of matchRequestStore.values()) {
+    if (
+      (mr.toUserId === userId || mr.fromUserId === userId) &&
+      (mr.status === "pending" || mr.status === "accepted")
+    )
+      return mr;
+  }
+}
+
+export function createMatchRequest({
+  fromUserId,
+  fromNickname,
+  fromAvatar,
+  fromRankTier,
+  fromScore,
+  toUserId,
+  broadcastId,
+  campusId,
+}: {
+  fromUserId: string;
+  fromNickname: string;
+  fromAvatar: string;
+  fromRankTier: string;
+  fromScore: number;
+  toUserId: string;
+  broadcastId: string;
+  campusId: string;
+}) {
+  // Cancel existing pending requests between these users
+  for (const [id, mr] of matchRequestStore.entries()) {
+    if (
+      mr.status === "pending" &&
+      (mr.fromUserId === fromUserId || mr.toUserId === fromUserId ||
+       mr.fromUserId === toUserId || mr.toUserId === toUserId)
+    ) {
+      matchRequestStore.delete(id);
+    }
+  }
+
+  const createdAt = now();
+  const mr: MatchRequest = {
+    id: `mr_${createdAt}_${fromUserId}_${toUserId}`,
+    fromUserId,
+    fromNickname,
+    fromAvatar,
+    fromRankTier,
+    fromScore,
+    toUserId,
+    broadcastId,
+    campusId,
+    status: "pending",
+    fromConfirmed: false,
+    toConfirmed: false,
+    createdAt,
+    expiresAt: createdAt + MATCH_REQUEST_TTL_MS,
+  };
+
+  // Mark the broadcast as matched so others don't see it
+  const broadcast = broadcastStore.get(broadcastId);
+  if (broadcast) {
+    broadcastStore.set(broadcastId, { ...broadcast, status: "matched" });
+  }
+
+  matchRequestStore.set(mr.id, mr);
+  return { matchRequest: mr };
+}
+
+export function pollMatchRequest({ userId }: { userId: string }) {
+  return getPendingMatchRequestForUser(userId) ?? null;
+}
+
+export function respondToMatchRequest({
+  matchRequestId,
+  userId,
+  accept,
+}: {
+  matchRequestId: string;
+  userId: string;
+  accept: boolean;
+}) {
+  const mr = matchRequestStore.get(matchRequestId);
+  if (!mr) throw new Error("MATCH_REQUEST_NOT_FOUND");
+  if (mr.toUserId !== userId) throw new Error("NOT_YOUR_REQUEST");
+
+  if (accept) {
+    mr.status = "accepted";
+    mr.toConfirmed = true; // A (broadcast creator) confirms by accepting
+    matchRequestStore.set(matchRequestId, mr);
+    return { matchRequest: mr, phase: "waiting_opponent" as const };
+  } else {
+    mr.status = "declined";
+    matchRequestStore.set(matchRequestId, mr);
+    return { matchRequest: mr, phase: "declined" as const };
+  }
+}
+
+export function confirmMatchFromAcceptor({
+  matchRequestId,
+  userId,
+}: {
+  matchRequestId: string;
+  userId: string;
+}) {
+  const mr = matchRequestStore.get(matchRequestId);
+  if (!mr) throw new Error("MATCH_REQUEST_NOT_FOUND");
+  if (mr.fromUserId !== userId) throw new Error("ONLY_ACCEPTOR_CAN_CONFIRM");
+
+  mr.fromConfirmed = true;
+  matchRequestStore.set(matchRequestId, mr);
+
+  if (mr.toConfirmed && mr.fromConfirmed) {
+    mr.status = "accepted";
+    return { matchRequest: mr, bothConfirmed: true as const };
+  }
+  return { matchRequest: mr, bothConfirmed: false as const };
+}
+
+export function getMatchRequestStatus({
+  matchRequestId,
+}: {
+  matchRequestId: string;
+}) {
+  const mr = matchRequestStore.get(matchRequestId);
+  if (!mr) return null;
+  return {
+    id: mr.id,
+    status: mr.status,
+    fromConfirmed: mr.fromConfirmed,
+    toConfirmed: mr.toConfirmed,
+    fromNickname: mr.fromNickname,
+    fromAvatar: mr.fromAvatar,
+    toUserId: mr.toUserId,
+    fromUserId: mr.fromUserId,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Channel messages — relay text/emoji between matched users.
+// ---------------------------------------------------------------------------
+
+export type ChannelMsg = {
+  id: string;
+  matchRequestId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  content: string;
+  type: "text" | "voice" | "system" | "image" | "time_proposal";
+  timestamp: string;
+  metadata?: Record<string, string>;
+};
+
+const channelMsgStore = new Map<string, ChannelMsg[]>(); // key: matchRequestId
+
+function ensureChannelMsgList(matchRequestId: string): ChannelMsg[] {
+  if (!channelMsgStore.has(matchRequestId)) channelMsgStore.set(matchRequestId, []);
+  return channelMsgStore.get(matchRequestId)!;
+}
+
+export function sendChannelMessage(input: {
+  matchRequestId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  content: string;
+  type: "text" | "voice" | "system" | "image" | "time_proposal";
+  id?: string;
+  metadata?: Record<string, string>;
+}) {
+  const list = ensureChannelMsgList(input.matchRequestId);
+  if (input.id && list.some((m) => m.id === input.id)) return list[list.length - 1];
+  const msg: ChannelMsg = {
+    id: input.id || `chmsg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    matchRequestId: input.matchRequestId,
+    senderId: input.senderId,
+    senderName: input.senderName,
+    senderAvatar: input.senderAvatar,
+    content: input.content,
+    type: input.type,
+    timestamp: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+    metadata: input.metadata,
+  };
+  list.push(msg);
+  // Keep only last 200 messages
+  if (list.length > 200) channelMsgStore.set(input.matchRequestId, list.slice(-200));
+  return msg;
+}
+
+export function pollChannelMessages(input: {
+  matchRequestId: string;
+  sinceId?: string;
+}) {
+  const list = ensureChannelMsgList(input.matchRequestId);
+  if (!input.sinceId) return list;
+  const idx = list.findIndex((m) => m.id === input.sinceId);
+  return idx >= 0 ? list.slice(idx + 1) : list;
+}
+
+export function declineMatchRequest({
+  matchRequestId,
+  userId,
+}: {
+  matchRequestId: string;
+  userId: string;
+}) {
+  const mr = matchRequestStore.get(matchRequestId);
+  if (!mr) throw new Error("MATCH_REQUEST_NOT_FOUND");
+  mr.status = "declined";
+  matchRequestStore.set(matchRequestId, mr);
+
+  // Revert associated broadcast back to "active" so others can accept it
+  const broadcast = broadcastStore.get(mr.broadcastId);
+  if (broadcast && broadcast.status === "matched") {
+    broadcastStore.set(mr.broadcastId, { ...broadcast, status: "active" });
+  }
+
+  return { ok: true };
+}
+
 export function cancelBroadcast({ userId }: { userId: string }) {
   let cancelled = false;
   for (const [id, broadcast] of broadcastStore.entries()) {
@@ -320,6 +584,8 @@ export function refreshPresence({
 export function resetMatchingStoreForTests() {
   presenceStore = new Map();
   broadcastStore = new Map();
+  matchRequestStore = new Map();
+  channelMsgStore.clear();
   rateLimitStore.clear();
   if (rateLimitCleanupTimer) {
     clearInterval(rateLimitCleanupTimer);

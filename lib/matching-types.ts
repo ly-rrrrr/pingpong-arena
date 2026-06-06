@@ -34,7 +34,7 @@ export interface MatchBroadcast {
   preferredVenue?: string; // 期望场地
   createdAt: string;
   status: 'active' | 'matched' | 'expired';
-  distance: string; // 与当前用户的距离
+  approxDistance: string; // 与当前用户的距离
 }
 
 // 频道消息
@@ -44,7 +44,7 @@ export interface ChannelMessage {
   senderName: string;
   senderAvatar: string;
   content: string;
-  type: 'text' | 'voice' | 'system' | 'time_proposal' | 'venue_proposal';
+  type: 'text' | 'voice' | 'system' | 'time_proposal' | 'venue_proposal' | 'image';
   timestamp: string;
   metadata?: {
     venueId?: string;
@@ -52,6 +52,7 @@ export interface ChannelMessage {
     timeSlotId?: string;
     proposedDate?: string;
     proposedTime?: string;
+    imageUri?: string;
   };
 }
 

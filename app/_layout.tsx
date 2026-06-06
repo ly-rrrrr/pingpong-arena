@@ -18,6 +18,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { CampusProvider } from "@/lib/campus-context";
 import { MatchingProvider } from "@/lib/matching-context";
 import { AppDataProvider } from "@/lib/app-data";
 
@@ -88,6 +89,7 @@ export default function RootLayout() {
           {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
           {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
           <AppDataProvider>
+            <CampusProvider>
             <MatchingProvider>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" />
@@ -95,6 +97,7 @@ export default function RootLayout() {
                 <Stack.Screen name="oauth/callback" />
               </Stack>
             </MatchingProvider>
+            </CampusProvider>
           </AppDataProvider>
           <StatusBar style="auto" />
         </QueryClientProvider>

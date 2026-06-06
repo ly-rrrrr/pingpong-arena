@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
 
@@ -35,8 +36,20 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
+  // On native mobile, derive API URL from Expo dev-server hostUri.
+  // Metro proxies /api/* to the tRPC server, so the API lives at the same host.
+  // hostUri already includes the port when non-standard (e.g. 172.x:8081);
+  // when it's a tunnel/production domain without port, don't add one.
+  if (ReactNative.Platform.OS !== "web") {
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      return `http://${hostUri}`;
+    }
+    return "http://localhost:8081";
+  }
+
   // On web, derive API URL from current page location
-  if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
+  if (typeof window !== "undefined" && window.location) {
     const { protocol, hostname, port } = window.location;
     // Cloud tunnel pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
     const apiHostname = hostname.replace(/^8081-/, "3000-");

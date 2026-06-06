@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import { BroadcastCard } from "@/components/broadcast-card";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAppData } from "@/lib/app-data";
 import { useMatching } from "@/lib/matching-context";
@@ -20,84 +21,6 @@ const TEST_USERS: Array<{ id: string; nickname: string; avatar: string; rankTier
   { id: "campus_user_001", nickname: "同校快攻手", avatar: "⚡", rankTier: "黄金", score: 1510 },
   { id: "campus_user_002", nickname: "体育馆球友", avatar: "🏀", rankTier: "铂金", score: 1680 },
 ];
-
-function getRankColor(rankTier: string): string {
-  const colors: Record<string, string> = {
-    青铜: "#CD7F32",
-    白银: "#C0C0C0",
-    黄金: "#D6A100",
-    铂金: "#00A6B2",
-    钻石: "#55A6D9",
-    大师: "#D84C91",
-    王者: "#E65A2E",
-  };
-  return colors[rankTier] || "#D6A100";
-}
-
-function formatCreatedAt(createdAt: string) {
-  const diffMs = Date.now() - Date.parse(createdAt);
-  if (!Number.isFinite(diffMs) || diffMs < 60_000) return "刚刚";
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 60) return `${minutes}分钟前`;
-  return `${Math.floor(minutes / 60)}小时前`;
-}
-
-function BroadcastCard({
-  broadcast,
-  onAccept,
-}: {
-  broadcast: CampusBroadcastView;
-  onAccept: () => void;
-}) {
-  return (
-    <View className="bg-surface rounded-2xl p-4 mb-3 border border-border">
-      <View className="flex-row items-center mb-3">
-        <View className="w-12 h-12 rounded-full bg-background items-center justify-center mr-3">
-          <Text className="text-xl">{broadcast.avatar}</Text>
-        </View>
-        <View className="flex-1">
-          <View className="flex-row items-center flex-wrap">
-            <Text className="text-sm font-bold text-foreground">{broadcast.nickname}</Text>
-            <View className="ml-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: `${getRankColor(broadcast.rankTier)}25` }}>
-              <Text className="text-[10px] font-bold" style={{ color: getRankColor(broadcast.rankTier) }}>
-                {broadcast.rankTier}
-              </Text>
-            </View>
-            <Text className="text-xs text-muted ml-2">积分 {broadcast.score}</Text>
-          </View>
-          <View className="flex-row items-center mt-1">
-            <Text className="text-xs text-primary">粗略距离 {broadcast.approxDistance}</Text>
-            <Text className="text-xs text-muted ml-2">· {formatCreatedAt(broadcast.createdAt)}</Text>
-          </View>
-        </View>
-      </View>
-
-      <Text className="text-sm text-foreground mb-2 leading-5">"{broadcast.message}"</Text>
-
-      <View className="flex-row items-center mb-3 flex-wrap gap-2">
-        {broadcast.preferredTime && (
-          <View className="bg-primary/10 px-2.5 py-1 rounded-full">
-            <Text className="text-xs text-primary">时间 {broadcast.preferredTime}</Text>
-          </View>
-        )}
-        {broadcast.preferredVenue && (
-          <View className="bg-accent/10 px-2.5 py-1 rounded-full">
-            <Text className="text-xs text-accent">场地 {broadcast.preferredVenue}</Text>
-          </View>
-        )}
-      </View>
-
-      <Pressable
-        style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
-        onPress={onAccept}
-      >
-        <View className="bg-primary rounded-xl py-3 items-center">
-          <Text className="text-sm font-bold text-background">接受匹配</Text>
-        </View>
-      </Pressable>
-    </View>
-  );
-}
 
 function LobbyUserRow({ user }: { user: LobbyUser }) {
   return (
@@ -125,6 +48,7 @@ export default function MatchingScreen() {
   const [showPublish, setShowPublish] = useState(false);
   const [message, setMessage] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
+  const [preferredVenue, setPreferredVenue] = useState("");
   const [devUserIndex, setDevUserIndex] = useState(0);
 
   const devUser = TEST_USERS[devUserIndex] ?? TEST_USERS[0];
@@ -150,10 +74,12 @@ export default function MatchingScreen() {
     retry,
     openSettings,
     enterWithLocation,
-  } = useCampusLocation({ user: campusUser });
+  } = useCampusLocation();
 
   const createBroadcastMutation = trpc.matching.createBroadcast.useMutation();
   const cancelBroadcastMutation = trpc.matching.cancelBroadcast.useMutation();
+  const createMatchRequestMutation = trpc.matching.createMatchRequest.useMutation();
+  const declineMatchRequestMutation = trpc.matching.declineMatchRequest.useMutation();
 
   const campusId = campus?.id ?? "__no_campus__";
   const lobbyQuery = trpc.matching.listLobby.useQuery(
@@ -166,8 +92,20 @@ export default function MatchingScreen() {
   );
 
   const onlineUsers = (lobbyQuery.data ?? []).filter((user) => user.id !== devUser.id);
-  const activeBroadcasts = (broadcastsQuery.data ?? []).filter((broadcast) => broadcast.userId !== devUser.id);
+  const allBroadcasts = broadcastsQuery.data ?? [];
   const canUseLobby = status === "inside" && Boolean(campus);
+
+  const sortedBroadcasts = useMemo(() => {
+    const broadcasts = [...allBroadcasts];
+    broadcasts.sort((a, b) => {
+      const aMine = a.userId === devUser.id;
+      const bMine = b.userId === devUser.id;
+      if (aMine !== bMine) return aMine ? -1 : 1;
+      if (aMine) return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+      return 0;
+    });
+    return broadcasts;
+  }, [allBroadcasts, devUser.id]);
 
   const handlePublish = async () => {
     if (!canUseLobby) {
@@ -184,11 +122,13 @@ export default function MatchingScreen() {
         userId: devUser.id,
         message: message.trim(),
         preferredTime: preferredTime.trim() || undefined,
+        preferredVenue: preferredVenue.trim() || undefined,
       });
       dispatch({ type: "START_BROADCAST", message: message.trim() });
       setShowPublish(false);
       setMessage("");
       setPreferredTime("");
+      setPreferredVenue("");
       await Promise.all([lobbyQuery.refetch(), broadcastsQuery.refetch()]);
       Alert.alert("发布成功", "匹配广播已发出，同校区在线球友可以看到。");
     } catch (error) {
@@ -206,21 +146,112 @@ export default function MatchingScreen() {
     }
   };
 
-  const handleAcceptBroadcast = (broadcast: CampusBroadcastView) => {
+  const [incomingNotification, setIncomingNotification] = useState<{
+    matchRequestId: string;
+    fromNickname: string;
+    fromAvatar: string;
+    fromUserId: string;
+  } | null>(null);
+  const notifiedRef = useRef<string | null>(null); // track which matchRequest we already alerted
+
+  // Poll for incoming match requests (broadcaster side)
+  const incomingQuery = trpc.matching.pollMatchRequest.useQuery(
+    { userId: devUser.id },
+    { enabled: canUseLobby && state.isMatching, refetchInterval: 3000 },
+  );
+
+  const incomingNotificationRef = useRef(incomingNotification);
+  incomingNotificationRef.current = incomingNotification;
+
+  // When someone accepts our broadcast, show notification (don't auto-navigate)
+  useEffect(() => {
+    const mr = incomingQuery.data;
+    if (mr && mr.status === "pending" && mr.toUserId === devUser.id && notifiedRef.current !== mr.id) {
+      notifiedRef.current = mr.id;
+      setIncomingNotification({
+        matchRequestId: mr.id,
+        fromNickname: mr.fromNickname,
+        fromAvatar: mr.fromAvatar,
+        fromUserId: mr.fromUserId,
+      });
+    }
+  }, [incomingQuery.data]);
+
+  // When match request is declined/cancelled, dismiss notification
+  useEffect(() => {
+    const mr = incomingQuery.data;
+    if (!mr || mr.status !== "pending") {
+      if (incomingNotificationRef.current && mr?.status === "declined") {
+        Alert.alert("匹配取消", "对方已取消此次匹配。");
+      }
+      if (mr?.status !== "accepted") {
+        setIncomingNotification(null);
+        notifiedRef.current = null;
+      }
+    }
+  }, [incomingQuery.data]);
+
+  // Handle broadcaster tapping their own matched broadcast
+  const handleTapMyBroadcast = (matchRequestId: string, fromUserId: string, fromNickname: string, fromAvatar: string) => {
+    setIncomingNotification(null);
+    dispatch({
+      type: "ACCEPT_MATCH",
+      opponentId: fromUserId,
+      opponentNickname: fromNickname,
+      opponentAvatar: fromAvatar,
+      opponentRankTier: "",
+      myId: devUser.id,
+    });
+    router.push({
+      pathname: "/matching/confirm",
+      params: {
+        matchRequestId,
+        role: "broadcaster",
+        opponentId: fromUserId,
+        myId: devUser.id,
+      },
+    } as any);
+  };
+
+  const handleAcceptBroadcast = async (broadcast: CampusBroadcastView) => {
     Alert.alert("接受匹配", `确定要接受 ${broadcast.nickname} 的匹配邀请吗？`, [
       { text: "取消", style: "cancel" },
       {
         text: "确定",
-        onPress: () => {
-          dispatch({
-            type: "ACCEPT_MATCH",
-            opponentId: broadcast.userId,
-            opponentNickname: broadcast.nickname,
-            opponentAvatar: broadcast.avatar,
-            opponentRankTier: broadcast.rankTier,
-            opponentApproxDistance: broadcast.approxDistance,
-          });
-          router.push("/matching/confirm" as any);
+        onPress: async () => {
+          try {
+            const result = await createMatchRequestMutation.mutateAsync({
+              fromUserId: devUser.id,
+              fromNickname: devUser.nickname,
+              fromAvatar: devUser.avatar,
+              fromRankTier: devUser.rankTier,
+              fromScore: devUser.score,
+              toUserId: broadcast.userId,
+              broadcastId: broadcast.id,
+              campusId,
+            });
+            dispatch({
+              type: "ACCEPT_MATCH",
+              opponentId: broadcast.userId,
+              opponentNickname: broadcast.nickname,
+              opponentAvatar: broadcast.avatar,
+              opponentRankTier: broadcast.rankTier,
+              opponentApproxDistance: broadcast.approxDistance,
+              myId: devUser.id,
+            });
+            router.push({
+              pathname: "/matching/confirm",
+              params: {
+                matchRequestId: result.matchRequest.id,
+                role: "acceptor",
+                opponentId: broadcast.userId,
+                myId: devUser.id,
+              },
+            } as any);
+          } catch (error) {
+            Alert.alert("匹配失败", "无法发起匹配请求，请重试。");
+            console.warn("[Matching] createMatchRequest failed:", error);
+          }
         },
       },
     ]);
@@ -257,7 +288,7 @@ export default function MatchingScreen() {
                     setDevUserIndex(idx);
                     // Reset lobby state when switching users
                     if (canUseLobby) {
-                      enterWithLocation(viewerLocation ?? DEMO_CAMPUS_LOCATION);
+                      enterWithLocation(viewerLocation ?? DEMO_CAMPUS_LOCATION, campusUser);
                     }
                   }}
                 >
@@ -298,7 +329,7 @@ export default function MatchingScreen() {
               {status === "idle" && (
                 <Pressable
                   style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-                  onPress={enterCampus}
+                  onPress={() => enterCampus(campusUser)}
                 >
                   <View className="bg-primary rounded-xl py-3 items-center">
                     <Text className="text-sm font-bold text-background">使用当前位置进入校区大厅</Text>
@@ -320,29 +351,51 @@ export default function MatchingScreen() {
               )}
 
               {status === "error" && (
-                <Pressable
-                  style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-                  onPress={retry}
-                >
-                  <View className="bg-primary rounded-xl py-3 items-center">
-                    <Text className="text-sm font-bold text-background">重新尝试定位</Text>
-                  </View>
-                </Pressable>
-              )}
-
-              {status === "outside" && (
-                <View className="bg-warning/10 rounded-lg px-3 py-2 border border-warning/30">
-                  <Text className="text-xs text-warning text-center">请移动到已开放校区范围内后重试</Text>
+                <View className="gap-2">
+                  <Pressable
+                    style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                    onPress={() => retry(campusUser)}
+                  >
+                    <View className="bg-surface border border-border rounded-xl py-3 items-center">
+                      <Text className="text-sm text-muted">重新尝试定位</Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+                    onPress={() => enterWithLocation(DEMO_CAMPUS_LOCATION, campusUser)}
+                  >
+                    <View className="bg-accent rounded-xl py-3.5 items-center">
+                      <Text className="text-sm font-bold text-background">跳过GPS，使用示例校区定位</Text>
+                      <Text className="text-xs text-background/60 mt-0.5">福州大学旗山校区 (26.0608, 119.2005)</Text>
+                    </View>
+                  </Pressable>
                 </View>
               )}
 
-              {process.env.NODE_ENV !== "production" && (
+              {status === "outside" && (
+                <View className="gap-2">
+                  <View className="bg-warning/10 rounded-lg px-3 py-2 border border-warning/30">
+                    <Text className="text-xs text-warning text-center">请移动到已开放校区范围内后重试</Text>
+                  </View>
+                  <Pressable
+                    style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+                    onPress={() => enterWithLocation(DEMO_CAMPUS_LOCATION, campusUser)}
+                  >
+                    <View className="bg-accent rounded-xl py-3.5 items-center">
+                      <Text className="text-sm font-bold text-background">跳过GPS，使用示例校区定位</Text>
+                      <Text className="text-xs text-background/60 mt-0.5">福州大学旗山校区 (26.0608, 119.2005)</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+
+              {(status === "idle" || status === "denied" || status === "disabled") && (
                 <Pressable
                   style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => enterWithLocation(DEMO_CAMPUS_LOCATION)}
+                  onPress={() => enterWithLocation(DEMO_CAMPUS_LOCATION, campusUser)}
                   disabled={status === "checking"}
                 >
-                  <View className="bg-surface border border-border rounded-xl py-3 items-center">
+                  <View className="bg-surface border border-border rounded-xl py-3 items-center mt-2">
                     <Text className="text-sm text-muted">开发预览：使用示例校区定位</Text>
                   </View>
                 </Pressable>
@@ -354,18 +407,11 @@ export default function MatchingScreen() {
           {canUseLobby && (
             <View className="mt-4 pt-4 border-t border-border">
               {state.isMatching ? (
-                <View className="bg-primary/10 rounded-xl p-4 border border-primary/30">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="flex-1">
-                      <Text className="text-sm font-bold text-primary">正在广播匹配</Text>
-                      <Text className="text-xs text-muted mt-0.5">等待同校区球友响应</Text>
-                    </View>
-                    <Pressable style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]} onPress={handleCancelBroadcast}>
-                      <View className="bg-error/15 px-3 py-1.5 rounded-full">
-                        <Text className="text-xs text-error font-medium">取消</Text>
-                      </View>
-                    </Pressable>
-                  </View>
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-xs text-primary">已发布广播，等待响应中...</Text>
+                  <Pressable onPress={handleCancelBroadcast}>
+                    <Text className="text-xs text-error">取消</Text>
+                  </Pressable>
                 </View>
               ) : showPublish ? (
                 <View>
@@ -401,6 +447,16 @@ export default function MatchingScreen() {
                     returnKeyType="done"
                   />
 
+                  <Text className="text-xs text-muted mb-1">期望场地（可选）</Text>
+                  <TextInput
+                    className="bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm mb-4"
+                    placeholder="例如：体育馆1号场地"
+                    placeholderTextColor="#9BA1A6"
+                    value={preferredVenue}
+                    onChangeText={setPreferredVenue}
+                    returnKeyType="done"
+                  />
+
                   <Pressable
                     style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
                     onPress={handlePublish}
@@ -432,6 +488,21 @@ export default function MatchingScreen() {
           </Text>
         </View>
 
+        {/* ===== 广播状态条 ===== */}
+        {canUseLobby && state.isMatching && (
+          <View className="bg-accent/10 rounded-xl px-4 py-3 mb-4 border border-accent/30 flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-accent">你的广播正在频道中</Text>
+              <Text className="text-xs text-muted mt-0.5" numberOfLines={1}>{state.myBroadcastMessage}</Text>
+            </View>
+            <Pressable style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]} onPress={handleCancelBroadcast}>
+              <View className="bg-error/15 px-3 py-1.5 rounded-full">
+                <Text className="text-xs text-error font-medium">取消广播</Text>
+              </View>
+            </Pressable>
+          </View>
+        )}
+
         {/* ===== 校区大厅：在线用户 ===== */}
         {canUseLobby && (
           <View className="bg-surface rounded-2xl p-4 mb-4 border border-border">
@@ -449,32 +520,97 @@ export default function MatchingScreen() {
           </View>
         )}
 
-        <Text className="text-base font-bold text-foreground mb-3">
-          附近正在找人 ({canUseLobby ? activeBroadcasts.length : 0})
-        </Text>
+        {/* ===== 通知 banner ===== */}
+        {incomingNotification && (
+          <View className="bg-success/15 rounded-2xl p-4 mb-4 border border-success/50">
+            <View className="flex-row items-center mb-2">
+              <Text className="text-lg mr-2">{incomingNotification.fromAvatar}</Text>
+              <Text className="text-sm font-bold text-foreground flex-1">
+                {incomingNotification.fromNickname} 接受了你的匹配邀请
+              </Text>
+            </View>
+            <Text className="text-xs text-muted mb-3">你的广播现在显示 "已有人确认匹配"，点击该广播即可进入确认页面。</Text>
+            <View className="flex-row gap-2">
+              <Pressable
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => {
+                  declineMatchRequestMutation.mutate({
+                    matchRequestId: incomingNotification.matchRequestId,
+                    userId: devUser.id,
+                  });
+                  setIncomingNotification(null);
+                  notifiedRef.current = null;
+                }}
+              >
+                <View className="bg-surface rounded-xl py-2.5 items-center border border-border">
+                  <Text className="text-sm text-muted">取消</Text>
+                </View>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => {
+                  handleTapMyBroadcast(
+                    incomingNotification.matchRequestId,
+                    incomingNotification.fromUserId,
+                    incomingNotification.fromNickname,
+                    incomingNotification.fromAvatar,
+                  );
+                }}
+              >
+                <View className="bg-primary rounded-xl py-2.5 items-center">
+                  <Text className="text-sm font-bold text-background">跳转</Text>
+                </View>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* ===== 广播频道 ===== */}
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="text-base font-bold text-foreground">
+            广播频道 · {canUseLobby ? sortedBroadcasts.length : 0} 条广播
+          </Text>
+        </View>
 
         {!canUseLobby && (
-          <View className="bg-surface rounded-2xl p-4 border border-border">
+          <View className="bg-surface rounded-2xl p-4 border border-border mb-4">
             <Text className="text-sm text-muted leading-5">通过校区定位校验后，才能查看同校区匹配广播。</Text>
           </View>
         )}
 
         {canUseLobby && broadcastsQuery.isLoading && <ActivityIndicator color="#2F80ED" />}
 
-        {canUseLobby && !broadcastsQuery.isLoading && activeBroadcasts.length === 0 && (
+        {canUseLobby && !broadcastsQuery.isLoading && sortedBroadcasts.length === 0 && (
           <View className="bg-surface rounded-2xl p-4 border border-border">
-            <Text className="text-sm text-muted leading-5">当前没有其他同校区匹配广播，可以先发布自己的需求。</Text>
+            <Text className="text-sm text-muted leading-5">当前没有同校区匹配广播，可以先发布自己的需求。</Text>
           </View>
         )}
 
         {canUseLobby &&
-          activeBroadcasts.map((broadcast) => (
-            <BroadcastCard
-              key={broadcast.id}
-              broadcast={broadcast}
-              onAccept={() => handleAcceptBroadcast(broadcast)}
-            />
-          ))}
+          sortedBroadcasts.map((broadcast) => {
+            const isMine = broadcast.userId === devUser.id;
+            const isMatched = broadcast.status === "matched";
+            return (
+              <BroadcastCard
+                key={broadcast.id}
+                broadcast={broadcast}
+                isMine={isMine}
+                isMatched={isMatched}
+                onAccept={() => {
+                  if (isMine && isMatched && incomingNotification) {
+                    handleTapMyBroadcast(
+                      incomingNotification.matchRequestId,
+                      incomingNotification.fromUserId,
+                      incomingNotification.fromNickname,
+                      incomingNotification.fromAvatar,
+                    );
+                  } else if (!isMine && !isMatched) {
+                    handleAcceptBroadcast(broadcast);
+                  }
+                }}
+              />
+            );
+          })}
       </ScrollView>
     </ScreenContainer>
   );

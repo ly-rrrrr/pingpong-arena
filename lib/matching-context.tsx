@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { MatchSession, MatchingStatus, ChannelMessage, TimeProposal, RetreatChoice, RetreatState } from './matching-types';
-import { sampleChannelMessages } from './matching-mock-data';
 
 interface MatchingState {
   session: MatchSession | null;
@@ -11,7 +10,7 @@ interface MatchingState {
 type MatchingAction =
   | { type: 'START_BROADCAST'; message: string }
   | { type: 'CANCEL_BROADCAST' }
-  | { type: 'ACCEPT_MATCH'; opponentId: string; opponentNickname: string; opponentAvatar: string; opponentRankTier: string; opponentApproxDistance?: string }
+  | { type: 'ACCEPT_MATCH'; opponentId: string; opponentNickname: string; opponentAvatar: string; opponentRankTier: string; opponentApproxDistance?: string; myId?: string }
   | { type: 'BOTH_CONFIRMED' }
   | { type: 'ENTER_CHANNEL' }
   | { type: 'SEND_MESSAGE'; message: ChannelMessage }
@@ -45,7 +44,7 @@ function matchingReducer(state: MatchingState, action: MatchingAction): Matching
         isMatching: false,
         session: {
           id: `session_${Date.now()}`,
-          myId: 'user_001',
+          myId: action.myId ?? 'user_001',
           opponentId: action.opponentId,
           opponentNickname: action.opponentNickname,
           opponentAvatar: action.opponentAvatar,
@@ -65,7 +64,6 @@ function matchingReducer(state: MatchingState, action: MatchingAction): Matching
         session: {
           ...state.session,
           status: 'in_channel',
-          messages: [...sampleChannelMessages],
         },
       };
 

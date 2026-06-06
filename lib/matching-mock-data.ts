@@ -14,7 +14,7 @@ export const matchBroadcasts: MatchBroadcast[] = [
     preferredVenue: '校园体育馆',
     createdAt: '5分钟前',
     status: 'active',
-    distance: '200m',
+    approxDistance: '200m',
   },
   {
     id: 'broadcast_002',
@@ -28,7 +28,7 @@ export const matchBroadcasts: MatchBroadcast[] = [
     preferredVenue: '阳光球馆',
     createdAt: '12分钟前',
     status: 'active',
-    distance: '500m',
+    approxDistance: '500m',
   },
   {
     id: 'broadcast_003',
@@ -41,7 +41,7 @@ export const matchBroadcasts: MatchBroadcast[] = [
     preferredTime: '明天上午10点-12点',
     createdAt: '20分钟前',
     status: 'active',
-    distance: '150m',
+    approxDistance: '150m',
   },
   {
     id: 'broadcast_004',
@@ -55,7 +55,7 @@ export const matchBroadcasts: MatchBroadcast[] = [
     preferredVenue: '校园体育馆',
     createdAt: '35分钟前',
     status: 'active',
-    distance: '300m',
+    approxDistance: '300m',
   },
   {
     id: 'broadcast_005',
@@ -68,7 +68,7 @@ export const matchBroadcasts: MatchBroadcast[] = [
     preferredTime: '今天下午5点-7点',
     createdAt: '1小时前',
     status: 'active',
-    distance: '800m',
+    approxDistance: '800m',
   },
 ];
 

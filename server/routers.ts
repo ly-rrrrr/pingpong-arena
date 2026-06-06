@@ -70,6 +70,69 @@ export const appRouter = router({
         location: locationSchema,
       }))
       .mutation(({ input }) => matching.refreshPresence(input)),
+
+    createMatchRequest: publicProcedure
+      .input(z.object({
+        fromUserId: z.string().min(1),
+        fromNickname: z.string().min(1),
+        fromAvatar: z.string().min(1),
+        fromRankTier: z.string().min(1),
+        fromScore: z.number().int().nonnegative(),
+        toUserId: z.string().min(1),
+        broadcastId: z.string().min(1),
+        campusId: z.string().min(1),
+      }))
+      .mutation(({ input }) => matching.createMatchRequest(input)),
+
+    pollMatchRequest: publicProcedure
+      .input(z.object({ userId: z.string().min(1) }))
+      .query(({ input }) => matching.pollMatchRequest(input)),
+
+    respondToMatchRequest: publicProcedure
+      .input(z.object({
+        matchRequestId: z.string().min(1),
+        userId: z.string().min(1),
+        accept: z.boolean(),
+      }))
+      .mutation(({ input }) => matching.respondToMatchRequest(input)),
+
+    confirmMatchFromAcceptor: publicProcedure
+      .input(z.object({
+        matchRequestId: z.string().min(1),
+        userId: z.string().min(1),
+      }))
+      .mutation(({ input }) => matching.confirmMatchFromAcceptor(input)),
+
+    getMatchRequestStatus: publicProcedure
+      .input(z.object({ matchRequestId: z.string().min(1) }))
+      .query(({ input }) => matching.getMatchRequestStatus(input)),
+
+    sendChannelMessage: publicProcedure
+      .input(z.object({
+        matchRequestId: z.string().min(1),
+        senderId: z.string().min(1),
+        senderName: z.string().min(1),
+        senderAvatar: z.string(),
+        content: z.string(),
+        type: z.enum(["text", "voice", "system", "image", "time_proposal"]),
+        id: z.string().optional(),
+        metadata: z.record(z.string(), z.string()).optional(),
+      }))
+      .mutation(({ input }) => matching.sendChannelMessage(input)),
+
+    declineMatchRequest: publicProcedure
+      .input(z.object({
+        matchRequestId: z.string().min(1),
+        userId: z.string().min(1),
+      }))
+      .mutation(({ input }) => matching.declineMatchRequest(input)),
+
+    pollChannelMessages: publicProcedure
+      .input(z.object({
+        matchRequestId: z.string().min(1),
+        sinceId: z.string().optional(),
+      }))
+      .query(({ input }) => matching.pollChannelMessages(input)),
   }),
 
   // TODO: add feature routers here, e.g.
