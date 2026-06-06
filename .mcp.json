@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "arena-watcher": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["arena:mcp"]
+    }
+  }
+}

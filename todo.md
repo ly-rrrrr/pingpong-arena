@@ -24,6 +24,24 @@
 - [x] 匹配机制 - 时间协商流程（最多2次）
 - [x] 匹配机制 - 劝退通知与三选项机制
 - [x] 匹配机制 - 双方选择状态可见与事务生效逻辑
+- [x] Arena Watcher v0.1 — AI 调试基础设施
+  - [x] 前端埋点 (lib/dev/arena-observer.tsx, report-bug.ts)
+  - [x] BUG 悬浮按钮 (components/dev/BugReportButton.tsx)
+  - [x] Local Collector HTTP 服务 (arena-watcher/src/collector.ts)
+  - [x] MCP Server (arena-watcher/src/mcp-server.ts) — 7 个工具
+  - [x] Claude Skills (/arena-debug, /arena-fix, /arena-verify)
+  - [x] PostToolUse Hook (自动 pnpm check)
+  - [x] 后端埋点 (server/_core/trpc.ts middleware, server/matching.ts trace)
+  - [x] 独立包抽取 (arena-watcher/)
+- [ ] Arena Watcher Vite Dashboard (v0.2)
+  - [ ] 实时事件流面板 (WebSocket)
+  - [ ] Incident 列表 + 详情 + 一键 Send to Claude
+  - [ ] Network Panel (tRPC 请求响应)
+  - [ ] State Snapshot 面板 (AsyncStorage + route)
+  - [ ] Claude Panel (修复状态 + 结果反馈)
+  - [ ] 技术栈: Vite + React + TypeScript + WebSocket
+  - [ ] 启动命令: `pnpm arena:dashboard` (port 5173)
+
 # 免费 OSM 高校边界接入
 
 - 已将校区准入从 `center + radiusMeters` 改为 polygon 边界命中。

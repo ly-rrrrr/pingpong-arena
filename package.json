@@ -16,7 +16,10 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "qr": "node scripts/generate_qr.mjs"
+    "qr": "node scripts/generate_qr.mjs",
+    "arena:watch": "tsx arena-watcher/src/collector.ts",
+    "arena:mcp": "tsx arena-watcher/src/mcp-server.ts",
+    "dev:observed": "concurrently -k \"pnpm arena:watch\" \"pnpm dev\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

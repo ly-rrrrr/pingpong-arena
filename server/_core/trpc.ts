@@ -8,7 +8,40 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
+
+// Arena Watcher: dev-only request logging middleware
+const devLogging = t.middleware(async (opts) => {
+  const start = Date.now();
+  const result = await opts.next();
+  const durationMs = Date.now() - start;
+
+  if (process.env.NODE_ENV === "development") {
+    const path = opts.path;
+    const ok = result.ok;
+    const userId = opts.ctx.user?.id;
+
+    import("../../server/dev-observer.js")
+      .then((m) => {
+        m.devLogBackendEvent({
+          type: "request",
+          message: `${path} ${ok ? "OK" : "ERROR"} ${durationMs}ms`,
+          data: {
+            method: "tRPC",
+            path,
+            status: ok ? 200 : 500,
+            durationMs,
+            user: userId,
+          },
+        });
+      })
+      .catch(() => {});
+  }
+
+  return result;
+});
+
+const baseProcedure = t.procedure.use(devLogging);
+export const publicProcedure = baseProcedure;
 
 const requireUser = t.middleware(async (opts) => {
   const { ctx, next } = opts;
@@ -25,9 +58,9 @@ const requireUser = t.middleware(async (opts) => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+export const protectedProcedure = baseProcedure.use(requireUser);
 
-export const adminProcedure = t.procedure.use(
+export const adminProcedure = baseProcedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
 

@@ -67,3 +67,8 @@ Thumbs.db
 
 # Local git worktrees
 .worktrees/
+
+# Arena Watcher runtime data
+.arena-watch/incidents/
+.arena-watch/logs/
+.arena-watch/last-typecheck.log

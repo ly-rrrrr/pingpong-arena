@@ -4,6 +4,7 @@ import {
   type Coordinates,
 } from "./campus-boundaries";
 import { openCampusBoundaries } from "./open-campus-boundaries";
+import { devLogBackendEvent } from "./dev-observer";
 
 export type { Coordinates } from "./campus-boundaries";
 
@@ -178,6 +179,11 @@ export function enterLobby({
 
   const campus = resolveCampus(location);
   console.log(`[enterLobby] user=${user.id} lat=${location.latitude} lng=${location.longitude} campus=${campus?.name ?? "NONE"}`);
+  devLogBackendEvent({
+    type: "matching",
+    message: `enterLobby user=${user.id} campus=${campus?.name ?? "NONE"} allowed=${!!campus}`,
+    data: { action: "enterLobby", userId: user.id, campusName: campus?.name, allowed: !!campus },
+  });
   if (!campus) {
     presenceStore.delete(user.id);
     return {
@@ -246,6 +252,11 @@ export function createBroadcast({
 
   broadcastStore.set(broadcast.id, broadcast);
   presenceStore.set(userId, { ...presence, status: "matching", lastSeenAt: createdAt });
+  devLogBackendEvent({
+    type: "matching",
+    message: `createBroadcast userId=${userId} broadcastId=${broadcast.id} campusId=${presence.campusId}`,
+    data: { action: "createBroadcast", userId, broadcastId: broadcast.id, campusId: presence.campusId },
+  });
   return broadcast;
 }
 
@@ -384,6 +395,11 @@ export function createMatchRequest({
   }
 
   matchRequestStore.set(mr.id, mr);
+  devLogBackendEvent({
+    type: "matching",
+    message: `createMatchRequest from=${fromUserId} to=${toUserId} mrId=${mr.id}`,
+    data: { action: "createMatchRequest", fromUserId, toUserId, matchRequestId: mr.id, campusId },
+  });
   return { matchRequest: mr };
 }
 
@@ -408,10 +424,20 @@ export function respondToMatchRequest({
     mr.status = "accepted";
     mr.toConfirmed = true; // A (broadcast creator) confirms by accepting
     matchRequestStore.set(matchRequestId, mr);
+    devLogBackendEvent({
+      type: "matching",
+      message: `respondToMatchRequest ACCEPT userId=${userId} mrId=${matchRequestId}`,
+      data: { action: "respondToMatchRequest", userId, matchRequestId, accept: true },
+    });
     return { matchRequest: mr, phase: "waiting_opponent" as const };
   } else {
     mr.status = "declined";
     matchRequestStore.set(matchRequestId, mr);
+    devLogBackendEvent({
+      type: "matching",
+      message: `respondToMatchRequest DECLINE userId=${userId} mrId=${matchRequestId}`,
+      data: { action: "respondToMatchRequest", userId, matchRequestId, accept: false },
+    });
     return { matchRequest: mr, phase: "declined" as const };
   }
 }
@@ -432,8 +458,18 @@ export function confirmMatchFromAcceptor({
 
   if (mr.toConfirmed && mr.fromConfirmed) {
     mr.status = "accepted";
+    devLogBackendEvent({
+      type: "matching",
+      message: `confirmMatch BOTH_CONFIRMED userId=${userId} mrId=${matchRequestId}`,
+      data: { action: "confirmMatch", userId, matchRequestId, bothConfirmed: true },
+    });
     return { matchRequest: mr, bothConfirmed: true as const };
   }
+  devLogBackendEvent({
+    type: "matching",
+    message: `confirmMatch WAITING userId=${userId} mrId=${matchRequestId}`,
+    data: { action: "confirmMatch", userId, matchRequestId, bothConfirmed: false },
+  });
   return { matchRequest: mr, bothConfirmed: false as const };
 }
 

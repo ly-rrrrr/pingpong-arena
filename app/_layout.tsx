@@ -21,6 +21,8 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-run
 import { CampusProvider } from "@/lib/campus-context";
 import { MatchingProvider } from "@/lib/matching-context";
 import { AppDataProvider } from "@/lib/app-data";
+import { ArenaObserverProvider, useArenaRouteTracker } from "@/lib/dev/arena-observer";
+import { BugReportButton } from "@/components/dev/BugReportButton";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -30,6 +32,8 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  useArenaRouteTracker();
+
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
 
@@ -83,25 +87,25 @@ export default function RootLayout() {
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
-          {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
-          {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
-          <AppDataProvider>
-            <CampusProvider>
-            <MatchingProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="matching" />
-                <Stack.Screen name="oauth/callback" />
-              </Stack>
-            </MatchingProvider>
-            </CampusProvider>
-          </AppDataProvider>
-          <StatusBar style="auto" />
-        </QueryClientProvider>
-      </trpc.Provider>
+      <ArenaObserverProvider>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <QueryClientProvider client={queryClient}>
+            <AppDataProvider>
+              <CampusProvider>
+              <MatchingProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="matching" />
+                  <Stack.Screen name="oauth/callback" />
+                </Stack>
+              </MatchingProvider>
+              </CampusProvider>
+            </AppDataProvider>
+            <StatusBar style="auto" />
+            <BugReportButton />
+          </QueryClientProvider>
+        </trpc.Provider>
+      </ArenaObserverProvider>
     </GestureHandlerRootView>
   );
 

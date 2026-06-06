@@ -1,0 +1,17 @@
+{
+  "name": "arena-watcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Debug DevTool for pingpong-arena — collects runtime events, generates bug incidents, and exposes MCP tools for Claude Code.",
+  "type": "module",
+  "scripts": {
+    "collector": "tsx src/collector.ts",
+    "mcp": "tsx src/mcp-server.ts",
+    "summarize": "tsx src/summarize.ts",
+    "checks": "tsx src/run-checks.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3"
+  }
+}
