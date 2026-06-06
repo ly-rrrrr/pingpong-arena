@@ -11,8 +11,9 @@ import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useSegments } from "expo-router";
 import type { ArenaEvent, ConsoleEvent, ErrorEvent as ArenaErrorEvent, NavigationEvent, NetworkEvent } from "./types";
 
+// Set EXPO_PUBLIC_ARENA_COLLECTOR_URL in .env.local to your LAN IP, e.g. http://172.17.170.212:4317
 const COLLECTOR_URL = __DEV__
-  ? process.env.EXPO_PUBLIC_ARENA_COLLECTOR_URL ?? "http://192.168.1.100:4317"
+  ? process.env.EXPO_PUBLIC_ARENA_COLLECTOR_URL ?? "http://<YOUR_LAN_IP>:4317"
   : "";
 
 const MAX_BUFFERED_EVENTS = 300;
